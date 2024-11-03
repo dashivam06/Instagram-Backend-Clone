@@ -1,13 +1,15 @@
+# Stage 1: Build the application
 FROM eclipse-temurin:21-jdk as build
-COPY . /app
 WORKDIR /app
-RUN ./mvnw package -DskipTests
-RUN mv -f /app/target/*.jar app.jar
+COPY . /app
+RUN ./mvnw clean package -DskipTests
 
+# Stage 2: Create the runtime image
 FROM eclipse-temurin:21-jre
-ARG PORT
+ARG PORT=8080
 ENV PORT=${PORT}
-COPY --from=build /app/app.jar .
-RUN useradd runtime
+COPY --from=build /app/target/instagram-0.0.1-SNAPSHOT.jar /app/app.jar
+RUN useradd -ms /bin/bash runtime
 USER runtime
-ENTRYPOINT [ "java", "-Dserver.port=${PORT}", "-jar", "app.jar" ]
+EXPOSE ${PORT}
+ENTRYPOINT ["java", "-Dserver.port=${PORT}", "-jar", "/app/app.jar"]
