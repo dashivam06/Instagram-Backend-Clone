@@ -1,17 +1,13 @@
-# Stage 1: Build the application
-FROM maven:3.8.4-openjdk-17 AS build
+FROM eclipse-temurin:21-jdk as build
+COPY . /app
 WORKDIR /app
-COPY pom.xml .
-RUN mvn dependency:go-offline
-COPY src ./src
-RUN mvn clean package -DskipTest
+RUN ./mvnw package -DskipTests
+RUN mv -f target/*.jar app.jar
 
-# Stage 2: Create the runtime image
-FROM openjdk:17-jdk-slim
-
-COPY --from=build /app/target/instagram-0.0.1-SNAPSHOT.jar /usr/local/lib/app.jar
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "/usr/local/lib/app.jar"]
-
-
-ENTRYPOINT ["java", "-jar", "/app/target/instagram-0.0.1-SNAPSHOT.jar"]
+FROM eclipse-temurin:21-jre
+ARG PORT
+ENV PORT=${PORT}
+COPY --from=build /app/app.jar .
+RUN useradd runtime
+USER runtime
+ENTRYPOINT [ "java", "-Dserver.port=${PORT}", "-jar", "app.jar" ]
